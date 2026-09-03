@@ -1,0 +1,13 @@
+# Build directories
+build/
+
+# IDE
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.user
+
+# macOS
+.DS_Store
