@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <vector>
 #include <cstdlib>
 #include "raylib.h"
@@ -29,6 +30,118 @@ Direction GetDirection(Vector2 direction){
     else if (direction.y == -1 && direction.x == 0) return UP;
     else if (direction.y == -1 && direction.x == -1) return UP_LEFT;
     else return NONE;
+}
+
+struct TileDimensions{
+    int length_;
+    int width_;
+};
+
+class Terrain{
+    public:
+        Terrain(int moveCost, bool isWater, int length, int width, Color color) 
+        : moveCost_(moveCost), isWater_(isWater), dimensions_{length, width}, color_(color) {}
+        Terrain(){}
+
+        void Draw(Vector2 position);
+        Vector2 GetDimensions();
+
+    private:
+        int moveCost_;
+        bool isWater_;
+        Color color_;
+        TileDimensions dimensions_;
+        // Texture texture_;
+};
+
+void Terrain::Draw(Vector2 position){
+    DrawRectangleV(
+        position, 
+        {static_cast<float>(dimensions_.width_), static_cast<float>(dimensions_.length_)},
+        color_
+    );
+}
+
+Vector2 Terrain::GetDimensions(){
+    return {static_cast<float>(dimensions_.width_), static_cast<float>(dimensions_.length_)};
+}
+
+class World{
+    public:
+        World();
+        void Draw();
+        void generateTerrain();
+
+    private:
+        static const int numTilesWidth = WIDTH / 16;
+        static const int numTilesHeight = HEIGHT / 16;
+        Terrain* tiles_[numTilesWidth][numTilesHeight];
+        Terrain grassTerrain_;
+        Terrain dirtTerrain_;
+        Terrain waterTerrain_;
+};
+
+World::World()
+:   grassTerrain_(1, false, 16, 16, GREEN),
+    dirtTerrain_(2, false, 16, 16, BROWN),
+    waterTerrain_(3, true, 16, 16, BLUE)
+{
+    for (int i = 0; i < numTilesWidth; i++) {
+        for (int j = 0; j < numTilesHeight; j++) {
+            tiles_[i][j] = nullptr;
+        }
+    }
+}
+
+void World::generateTerrain(){
+    for (int i = 0; i < numTilesWidth; i++){
+        for (int j = 0; j < numTilesHeight; j++){
+            if (tiles_[i][j] != nullptr) { continue; }
+
+            if (rand() % 100 >= 99){
+                tiles_[i][j] = &waterTerrain_;
+
+                int waterDecision = rand() % 4;
+                if (waterDecision >= 3) {
+                    // fill entire row with water
+                    for (Terrain*& tile : tiles_[i]) tile = &waterTerrain_;
+                }
+                else {
+                    int pondRadius = rand() % 3 + 3; // [3, 5]
+                    int kMin = std::max(0, i - pondRadius);
+                    int kMax = std::min(numTilesWidth - 1, i + pondRadius);
+                    int lMin = std::max(0, j - pondRadius);
+                    int lMax = std::min(numTilesHeight - 1, j + pondRadius);
+
+                    for (int k = kMin; k <= kMax; k++){
+                        for (int l = lMin; l <= lMax; l++){
+                            int dx = k - i;
+                            int dy = l - j;
+                            if (dx*dx + dy*dy <= pondRadius*pondRadius){
+                                tiles_[k][l] = &waterTerrain_;
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                tiles_[i][j] = &grassTerrain_;
+            }
+        }
+    }
+}
+
+void World::Draw(){
+    Vector2 position;
+    for (int i = 0; i < numTilesWidth; i++){
+        for (int j = 0; j < numTilesHeight; j++){
+            if (tiles_[i][j] != nullptr) {
+                position.x = i * tiles_[i][j]->GetDimensions().x;
+                position.y = j * tiles_[i][j]->GetDimensions().y;
+                tiles_[i][j]->Draw(position);
+            }
+        }
+    }
 }
 
 class InputHandler{
@@ -121,6 +234,11 @@ Animator::Animator(){}
 void Animator::LoadSprite(const PokemonTemplate& pkmn_tmp) {
     std::string path = "assets/" + pkmn_tmp.GetName() + "_sprites/Walk-Anim.png";
     sprite_ = LoadTexture(path.c_str());
+    
+    if (sprite_.id == 0) {
+        std::cout << "Warning: Failed to load sprite for " << pkmn_tmp.GetName() << " from " << path << std::endl;
+        return;
+    }
 
     LoadAnimationData(pkmn_tmp);
 
@@ -180,7 +298,9 @@ void Animator::Update(float dt){
 }
 
 void Animator::Draw(Vector2 position){
-    DrawTextureRec(sprite_, sourceRec_, position, WHITE);
+    if (sprite_.id != 0) {
+        DrawTextureRec(sprite_, sourceRec_, position, WHITE);
+    }
 }
 
 
@@ -266,7 +386,8 @@ void Pokemon::Draw(){
 int main()
 {
     InitWindow(800, 450, "Raylib Test");
-
+    World world;
+    world.generateTerrain();
     InputHandler input_handler = InputHandler();
 
     const PokemonTemplate jirachi_template("jirachi", 100, 100, 100, 100, 100, 100);
@@ -284,6 +405,7 @@ int main()
     while (!WindowShouldClose())
     {   
         float dt = GetFrameTime();
+        world.Draw();
         jirachi.Move(input_handler.GetMovementDirection(), dt);
         jirachi.Update(dt);
         gible.Update(dt);
