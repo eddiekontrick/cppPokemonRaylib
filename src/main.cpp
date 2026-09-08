@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <vector>
 #include <cstdlib>
+#include <string>
 #include "raylib.h"
 #include "tinyxml2.h"
 
@@ -44,6 +45,8 @@ class Terrain{
         Terrain(){}
 
         void Draw(Vector2 position);
+        void DrawCoordinates(Vector2 position);
+        bool CheckWaterTile();
         Vector2 GetDimensions();
 
     private:
@@ -59,11 +62,72 @@ void Terrain::Draw(Vector2 position){
         position, 
         {static_cast<float>(dimensions_.width_), static_cast<float>(dimensions_.length_)},
         color_
-    );
+    ); 
 }
+
+void Terrain::DrawCoordinates(Vector2 position){
+    DrawRectangleLines(position.x, position.y, dimensions_.width_, dimensions_.length_, LIGHTGRAY);
+    std::string coords = "{" + std::to_string(position.x) +  " , "  + std::to_string(position.y) + "}";
+    DrawText(coords.c_str(), static_cast<int>(position.x), static_cast<int>(position.y), 5, BLACK);   
+}
+
+bool Terrain::CheckWaterTile() { return isWater_; }
 
 Vector2 Terrain::GetDimensions(){
     return {static_cast<float>(dimensions_.width_), static_cast<float>(dimensions_.length_)};
+}
+
+// Turn this into world object template
+class WorldObject{
+    public:
+        WorldObject(Vector2 position);
+        WorldObject(){}
+        void Draw();
+        void Draw(Vector2 position);
+        void setPosition(int x, int y);
+        int getPositionX();
+        int getPositionY();
+    private:
+        // -----------------
+        // THIS is the issue, every instance has the same position because its a pointer
+        // _________________
+        Vector2 position_;
+};
+
+int WorldObject::getPositionX(){ return position_.x; }
+int WorldObject::getPositionY(){ return position_.y; }
+
+WorldObject::WorldObject(Vector2 position)
+: position_(position){}
+
+// Draw should know its position
+void WorldObject::Draw(){
+    Vector2 trunkSize = { 6, 12 };
+    Vector2 top = {position_.x + 3, position_.y - 12};
+    Vector2 bottomRight = { position_.x + 12, position_.y};
+    Vector2 bottomLeft = { position_.x - 6, position_.y};
+    DrawRectangleV(position_, trunkSize, BROWN);
+    DrawTriangle(top, bottomLeft, bottomRight, DARKGREEN);
+    DrawTriangle({top.x, top.y - 6}, {bottomLeft.x, bottomLeft.y - 6}, {bottomRight.x, bottomRight.y - 6}, DARKGREEN);
+}
+/*
+    THIS IS A TEMPORARY FIX
+    the real solution will be implementing a separate WorldObjectTemplate virtual class with all the static variables
+    and a WorldObject, or maybe just derived classes, with instance specific variables
+*/
+void WorldObject::Draw(Vector2 position){
+    Vector2 trunkSize = { 6, 12 };
+    Vector2 top = {position.x + 3, position.y - 12};
+    Vector2 bottomRight = { position.x + 12, position.y};
+    Vector2 bottomLeft = { position.x - 6, position.y};
+    DrawRectangleV(position, trunkSize, BROWN);
+    DrawTriangle(top, bottomLeft, bottomRight, DARKGREEN);
+    DrawTriangle({top.x, top.y - 6}, {bottomLeft.x, bottomLeft.y - 6}, {bottomRight.x, bottomRight.y - 6}, DARKGREEN);
+}
+
+void WorldObject::setPosition(int x, int y){
+    position_.x = x;
+    position_.y = y;
 }
 
 class World{
@@ -71,24 +135,48 @@ class World{
         World();
         void Draw();
         void generateTerrain();
+        void generateWorldObjects();
+        void showOccupied();
 
     private:
         static const int numTilesWidth = WIDTH / 16;
         static const int numTilesHeight = HEIGHT / 16;
         Terrain* tiles_[numTilesWidth][numTilesHeight];
+        WorldObject* worldObjects_[numTilesWidth][numTilesHeight];
+        bool occupied_[numTilesWidth][numTilesHeight];
         Terrain grassTerrain_;
-        Terrain dirtTerrain_;
+        Terrain rockTerrain_;
         Terrain waterTerrain_;
+        WorldObject tree_;
+        WorldObject rock_;
 };
+
+void World::showOccupied(){
+    Vector2 position = { 0 , 0 };
+    std::cout << "Occupied grid: \n" << std::endl;
+    std::cout << "\n------------------------------" << std::endl;
+    for (int i = 0; i < numTilesWidth; i++){
+        for (int j = 0; j < numTilesHeight; j++){
+            position.x = i * tiles_[i][j]->GetDimensions().x;
+            position.y = j * tiles_[i][j]->GetDimensions().y;
+            std::cout << "|" << occupied_[i][j] << "\{" << position.x  << "," << position.y << "}" << "|";
+        }
+        std::cout << "\n------------------------------" << std::endl;
+    }
+}
 
 World::World()
 :   grassTerrain_(1, false, 16, 16, GREEN),
-    dirtTerrain_(2, false, 16, 16, BROWN),
-    waterTerrain_(3, true, 16, 16, BLUE)
+    rockTerrain_(2, false, 16, 16, BROWN),
+    waterTerrain_(3, true, 16, 16, BLUE),
+    tree_(),
+    rock_()
 {
     for (int i = 0; i < numTilesWidth; i++) {
         for (int j = 0; j < numTilesHeight; j++) {
             tiles_[i][j] = nullptr;
+            worldObjects_[i][j] = nullptr;
+            occupied_[i][j] = false;
         }
     }
 }
@@ -104,7 +192,9 @@ void World::generateTerrain(){
                 int waterDecision = rand() % 4;
                 if (waterDecision >= 3) {
                     // fill entire row with water
-                    for (Terrain*& tile : tiles_[i]) tile = &waterTerrain_;
+                    for (Terrain*& tile : tiles_[i]) {
+                        tile = &waterTerrain_; 
+                    }
                 }
                 else {
                     int pondRadius = rand() % 3 + 3; // [3, 5]
@@ -131,14 +221,44 @@ void World::generateTerrain(){
     }
 }
 
+void World::generateWorldObjects(){
+    for (int i = 0; i < numTilesWidth; i++){
+        for (int j = 0; j < numTilesHeight; j++){
+            // skip if water tile
+            // SOMETHING ABOUT THIS is not working
+            if (tiles_[i][j]->CheckWaterTile()) { continue; }
+
+            int random = rand() % 101;
+            if (random >= 95){
+                int radius = rand() % 5;
+                for (int k = ((i - radius) > 0) ? (i - radius) : 0; k < i + radius && k < numTilesWidth; k++){
+                    for (int l = ((j - radius) > 0) ? (j - radius) : 0; l < j + radius && l < numTilesHeight; l++){
+                        int treeRandom = rand() % 100;
+                        // skip if already set to something, and randomly decide to place
+                        if (tiles_[k][l]->CheckWaterTile()) { continue; } 
+                        if (worldObjects_[k][l] != nullptr && treeRandom <= 1) { continue; }
+                        worldObjects_[k][l] = &tree_;
+                        worldObjects_[k][l]->setPosition(k * tiles_[k][l]->GetDimensions().x, l * tiles_[k][l]->GetDimensions().x);
+                        occupied_[k][l] = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
 void World::Draw(){
-    Vector2 position;
+    Vector2 position = { 0, 0 };
     for (int i = 0; i < numTilesWidth; i++){
         for (int j = 0; j < numTilesHeight; j++){
             if (tiles_[i][j] != nullptr) {
                 position.x = i * tiles_[i][j]->GetDimensions().x;
                 position.y = j * tiles_[i][j]->GetDimensions().y;
                 tiles_[i][j]->Draw(position);
+                if (worldObjects_[i][j] != nullptr) { 
+                    // Change this back once compartmentalization of classes for world objects
+                    worldObjects_[i][j]->Draw(position);    
+                }
             }
         }
     }
@@ -165,7 +285,7 @@ Vector2 InputHandler::GetMovementDirection(){
 
 class PokemonTemplate {
     public:
-        PokemonTemplate(std::string name, float hp, float attack, float sp_attack, float defense, float sp_defense, float speed);
+        PokemonTemplate(std::string name, float hp, float attack, float sp_attack, float defense, float sp_defense, float speed, Vector2 hitbox);
         void DisplayStats() const;
         float GetSpeed() const;
         std::string GetName() const;
@@ -180,10 +300,12 @@ class PokemonTemplate {
         float defense_;
         float sp_defense_;
         float speed_;
+        //
+        Vector2 hitbox_;
 };
 
-PokemonTemplate::PokemonTemplate(std::string name, float hp, float attack, float sp_attack, float defense, float sp_defense, float speed)
-    : name_(name), hp_(hp), attack_(attack), sp_attack_(sp_attack), defense_(defense), sp_defense_(sp_defense), speed_(speed) {}
+PokemonTemplate::PokemonTemplate(std::string name, float hp, float attack, float sp_attack, float defense, float sp_defense, float speed, Vector2 hitbox)
+    : name_(name), hp_(hp), attack_(attack), sp_attack_(sp_attack), defense_(defense), sp_defense_(sp_defense), speed_(speed), hitbox_(hitbox) {}
 
 
 float PokemonTemplate::GetSpeed() const{
@@ -303,7 +425,6 @@ void Animator::Draw(Vector2 position){
     }
 }
 
-
 class Pokemon{
     public:
         Pokemon(const PokemonTemplate& pkmn_template, Vector2 initPosition={WIDTH/2, HEIGHT/2});
@@ -388,24 +509,22 @@ int main()
     InitWindow(800, 450, "Raylib Test");
     World world;
     world.generateTerrain();
+    world.generateWorldObjects();
     InputHandler input_handler = InputHandler();
 
-    const PokemonTemplate jirachi_template("jirachi", 100, 100, 100, 100, 100, 100);
-    const PokemonTemplate celebi_template("celebi", 100, 100, 100, 100, 100, 100);
-    const PokemonTemplate gible_template("gible", 58, 70, 45, 40, 45, 42);
+    Vector2 standHitbox = { 20, 20 };
+
+    const PokemonTemplate jirachi_template("jirachi", 100, 100, 100, 100, 100, 100, standHitbox);
+    const PokemonTemplate celebi_template("celebi", 100, 100, 100, 100, 100, 100, standHitbox);
+    const PokemonTemplate gible_template("gible", 58, 70, 45, 40, 45, 42, standHitbox);
     Pokemon jirachi(jirachi_template);
     Pokemon celebi(celebi_template, { (float)(rand() % 700 + 100), (float)(rand() % 400 + 50) });
     Pokemon gible(gible_template, { (float)(rand() % 700 + 100), (float)(rand() % 400 + 50) });
-
-    std::cout << "---------------" << std::endl;
-    jirachi.DisplayStats();
-    gible.DisplayStats();
-    celebi.DisplayStats();
     
     while (!WindowShouldClose())
     {   
         float dt = GetFrameTime();
-        world.Draw();
+        // world.showOccupied();
         jirachi.Move(input_handler.GetMovementDirection(), dt);
         jirachi.Update(dt);
         gible.Update(dt);
@@ -413,7 +532,9 @@ int main()
 
         BeginDrawing();
 
+        world.Draw();
         ClearBackground(RAYWHITE);
+        
         jirachi.Draw();
         gible.Draw();
         celebi.Draw();
