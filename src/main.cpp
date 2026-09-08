@@ -33,21 +33,27 @@ Direction GetDirection(Vector2 direction){
     else return NONE;
 }
 
+enum class TerrainType{
+    NONE = -1,
+    Grass,
+    Water
+};
+
 struct TileDimensions{
     int length_;
     int width_;
 };
 
-class Terrain{
+class TerrainTemplate{
     public:
-        Terrain(int moveCost, bool isWater, int length, int width, Color color) 
+        TerrainTemplate(int moveCost, bool isWater, int length, int width, Color color) 
         : moveCost_(moveCost), isWater_(isWater), dimensions_{length, width}, color_(color) {}
-        Terrain(){}
+        TerrainTemplate(){}
 
-        void Draw(Vector2 position);
-        void DrawCoordinates(Vector2 position);
-        bool CheckWaterTile();
-        Vector2 GetDimensions();
+        void Draw(Vector2 position) const;
+        void DrawCoordinates(Vector2 position) const;
+        bool CheckWaterTile() const;
+        Vector2 GetDimensions() const;
 
     private:
         int moveCost_;
@@ -57,7 +63,7 @@ class Terrain{
         // Texture texture_;
 };
 
-void Terrain::Draw(Vector2 position){
+void TerrainTemplate::Draw(Vector2 position) const {
     DrawRectangleV(
         position, 
         {static_cast<float>(dimensions_.width_), static_cast<float>(dimensions_.length_)},
@@ -65,15 +71,15 @@ void Terrain::Draw(Vector2 position){
     ); 
 }
 
-void Terrain::DrawCoordinates(Vector2 position){
+void TerrainTemplate::DrawCoordinates(Vector2 position) const {
     DrawRectangleLines(position.x, position.y, dimensions_.width_, dimensions_.length_, LIGHTGRAY);
     std::string coords = "{" + std::to_string(position.x) +  " , "  + std::to_string(position.y) + "}";
     DrawText(coords.c_str(), static_cast<int>(position.x), static_cast<int>(position.y), 5, BLACK);   
 }
 
-bool Terrain::CheckWaterTile() { return isWater_; }
+bool TerrainTemplate::CheckWaterTile() const { return isWater_; }
 
-Vector2 Terrain::GetDimensions(){
+Vector2 TerrainTemplate::GetDimensions() const {
     return {static_cast<float>(dimensions_.width_), static_cast<float>(dimensions_.length_)};
 }
 
@@ -134,66 +140,64 @@ class World{
     public:
         World();
         void Draw();
-        void generateTerrain();
+        void generateTerrainTemplate();
         void generateWorldObjects();
-        void showOccupied();
+        const TerrainTemplate& getTerrainTemplate(TerrainType type) const;
 
     private:
         static const int numTilesWidth = WIDTH / 16;
         static const int numTilesHeight = HEIGHT / 16;
-        Terrain* tiles_[numTilesWidth][numTilesHeight];
+        // TerrainTemplate* tiles_[numTilesWidth][numTilesHeight];
+        TerrainType tiles_[numTilesWidth][numTilesHeight];
         WorldObject* worldObjects_[numTilesWidth][numTilesHeight];
         bool occupied_[numTilesWidth][numTilesHeight];
-        Terrain grassTerrain_;
-        Terrain rockTerrain_;
-        Terrain waterTerrain_;
+        TerrainTemplate noneTerrainTemplate_;
+        TerrainTemplate grassTerrainTemplate_;
+        TerrainTemplate rockTerrainTemplate_;
+        TerrainTemplate waterTerrainTemplate_;
         WorldObject tree_;
         WorldObject rock_;
 };
 
-void World::showOccupied(){
-    Vector2 position = { 0 , 0 };
-    std::cout << "Occupied grid: \n" << std::endl;
-    std::cout << "\n------------------------------" << std::endl;
-    for (int i = 0; i < numTilesWidth; i++){
-        for (int j = 0; j < numTilesHeight; j++){
-            position.x = i * tiles_[i][j]->GetDimensions().x;
-            position.y = j * tiles_[i][j]->GetDimensions().y;
-            std::cout << "|" << occupied_[i][j] << "\{" << position.x  << "," << position.y << "}" << "|";
-        }
-        std::cout << "\n------------------------------" << std::endl;
-    }
-}
 
 World::World()
-:   grassTerrain_(1, false, 16, 16, GREEN),
-    rockTerrain_(2, false, 16, 16, BROWN),
-    waterTerrain_(3, true, 16, 16, BLUE),
+:   noneTerrainTemplate_(0, false, 16, 16, GRAY),
+    grassTerrainTemplate_(1, false, 16, 16, GREEN),
+    rockTerrainTemplate_(2, false, 16, 16, BROWN),
+    waterTerrainTemplate_(3, true, 16, 16, BLUE),
     tree_(),
     rock_()
 {
     for (int i = 0; i < numTilesWidth; i++) {
         for (int j = 0; j < numTilesHeight; j++) {
-            tiles_[i][j] = nullptr;
+            tiles_[i][j] = TerrainType::NONE;
             worldObjects_[i][j] = nullptr;
             occupied_[i][j] = false;
         }
     }
 }
 
-void World::generateTerrain(){
+const TerrainTemplate& World::getTerrainTemplate(TerrainType type) const{
+    switch(type){
+        case(TerrainType::NONE) : return noneTerrainTemplate_;
+        case(TerrainType::Grass) : return grassTerrainTemplate_;
+        case(TerrainType::Water): return waterTerrainTemplate_;
+    }
+}
+
+void World::generateTerrainTemplate(){
     for (int i = 0; i < numTilesWidth; i++){
         for (int j = 0; j < numTilesHeight; j++){
-            if (tiles_[i][j] != nullptr) { continue; }
+            if (tiles_[i][j] != TerrainType::NONE) { continue; }
 
             if (rand() % 100 >= 99){
-                tiles_[i][j] = &waterTerrain_;
+                tiles_[i][j] = TerrainType::Water;
 
                 int waterDecision = rand() % 4;
                 if (waterDecision >= 3) {
                     // fill entire row with water
-                    for (Terrain*& tile : tiles_[i]) {
-                        tile = &waterTerrain_; 
+                    for (TerrainType& tile : tiles_[i]) {
+                        tile = TerrainType::Water; 
                     }
                 }
                 else {
@@ -208,14 +212,14 @@ void World::generateTerrain(){
                             int dx = k - i;
                             int dy = l - j;
                             if (dx*dx + dy*dy <= pondRadius*pondRadius){
-                                tiles_[k][l] = &waterTerrain_;
+                                tiles_[k][l] = TerrainType::Water;
                             }
                         }
                     }
                 }
             }
             else {
-                tiles_[i][j] = &grassTerrain_;
+                tiles_[i][j] = TerrainType::Grass;
             }
         }
     }
@@ -226,7 +230,7 @@ void World::generateWorldObjects(){
         for (int j = 0; j < numTilesHeight; j++){
             // skip if water tile
             // SOMETHING ABOUT THIS is not working
-            if (tiles_[i][j]->CheckWaterTile()) { continue; }
+            if (tiles_[i][j] == TerrainType::Water) { continue; }
 
             int random = rand() % 101;
             if (random >= 95){
@@ -235,10 +239,10 @@ void World::generateWorldObjects(){
                     for (int l = ((j - radius) > 0) ? (j - radius) : 0; l < j + radius && l < numTilesHeight; l++){
                         int treeRandom = rand() % 100;
                         // skip if already set to something, and randomly decide to place
-                        if (tiles_[k][l]->CheckWaterTile()) { continue; } 
+                        if (tiles_[k][l] == TerrainType::Water) { continue; } 
                         if (worldObjects_[k][l] != nullptr && treeRandom <= 1) { continue; }
                         worldObjects_[k][l] = &tree_;
-                        worldObjects_[k][l]->setPosition(k * tiles_[k][l]->GetDimensions().x, l * tiles_[k][l]->GetDimensions().x);
+                        worldObjects_[k][l]->setPosition(k * getTerrainTemplate(tiles_[k][l]).GetDimensions().x, l * getTerrainTemplate(tiles_[k][l]).GetDimensions().y);
                         occupied_[k][l] = true;
                     }
                 }
@@ -251,11 +255,11 @@ void World::Draw(){
     Vector2 position = { 0, 0 };
     for (int i = 0; i < numTilesWidth; i++){
         for (int j = 0; j < numTilesHeight; j++){
-            if (tiles_[i][j] != nullptr) {
-                position.x = i * tiles_[i][j]->GetDimensions().x;
-                position.y = j * tiles_[i][j]->GetDimensions().y;
-                tiles_[i][j]->Draw(position);
-                if (worldObjects_[i][j] != nullptr) { 
+            if (tiles_[i][j] != TerrainType::NONE) {
+                position.x = i * getTerrainTemplate(tiles_[i][j]).GetDimensions().x; 
+                position.y = j * getTerrainTemplate(tiles_[i][j]).GetDimensions().y; 
+                getTerrainTemplate(tiles_[i][j]).Draw(position);
+                if (worldObjects_[i][j] != nullptr){
                     // Change this back once compartmentalization of classes for world objects
                     worldObjects_[i][j]->Draw(position);    
                 }
@@ -508,7 +512,7 @@ int main()
 {
     InitWindow(800, 450, "Raylib Test");
     World world;
-    world.generateTerrain();
+    world.generateTerrainTemplate();
     world.generateWorldObjects();
     InputHandler input_handler = InputHandler();
 
@@ -518,7 +522,7 @@ int main()
     const PokemonTemplate celebi_template("celebi", 100, 100, 100, 100, 100, 100, standHitbox);
     const PokemonTemplate gible_template("gible", 58, 70, 45, 40, 45, 42, standHitbox);
     Pokemon jirachi(jirachi_template);
-    Pokemon celebi(celebi_template, { (float)(rand() % 700 + 100), (float)(rand() % 400 + 50) });
+    Pokemon celebi(celebi_template, { (float)(rand() % 400 + 100), (float)(rand() % 200 + 50) });
     Pokemon gible(gible_template, { (float)(rand() % 700 + 100), (float)(rand() % 400 + 50) });
     
     while (!WindowShouldClose())
