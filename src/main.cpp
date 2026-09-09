@@ -86,44 +86,38 @@ Vector2 TerrainTemplate::GetDimensions() const {
 // Turn this into world object template
 class WorldObject{
     public:
-        WorldObject(Vector2 position);
-        WorldObject(){}
-        void Draw();
-        void Draw(Vector2 position);
-        void setPosition(int x, int y);
-        int getPositionX();
-        int getPositionY();
-    private:
-        // -----------------
-        // THIS is the issue, every instance has the same position because its a pointer
-        // _________________
+        virtual ~WorldObject(){}
+        virtual void Draw() = 0;
+        void setPosition(Vector2 position);
+        Vector2 getTile() const;
+        Vector2 getPosition() const;
+
+    protected:
         Vector2 position_;
+        // int radius; For how much space it occupies
+        // Texture2D texture;
 };
 
-int WorldObject::getPositionX(){ return position_.x; }
-int WorldObject::getPositionY(){ return position_.y; }
+void WorldObject::setPosition(Vector2 position){ position_ = position; }
+Vector2 WorldObject::getPosition() const { return position_; }
 
-WorldObject::WorldObject(Vector2 position)
-: position_(position){}
-
-// Draw should know its position
-void WorldObject::Draw(){
-    Vector2 trunkSize = { 6, 12 };
-    Vector2 top = {position_.x + 3, position_.y - 12};
-    Vector2 bottomRight = { position_.x + 12, position_.y};
-    Vector2 bottomLeft = { position_.x - 6, position_.y};
-    DrawRectangleV(position_, trunkSize, BROWN);
-    DrawTriangle(top, bottomLeft, bottomRight, DARKGREEN);
-    DrawTriangle({top.x, top.y - 6}, {bottomLeft.x, bottomLeft.y - 6}, {bottomRight.x, bottomRight.y - 6}, DARKGREEN);
+Vector2 WorldObject::getTile() const{
+    Vector2 tileLocation = position_;
+    tileLocation.x = tileLocation.x / 16;
+    tileLocation.y = tileLocation.y / 16;
+    return tileLocation;
 }
-/*
-    THIS IS A TEMPORARY FIX
-    the real solution will be implementing a separate WorldObjectTemplate virtual class with all the static variables
-    and a WorldObject, or maybe just derived classes, with instance specific variables
-*/
-void WorldObject::Draw(Vector2 position){
+
+class TreeObject : public WorldObject{
+    public:
+        TreeObject(){}
+        virtual void Draw();
+};
+
+void TreeObject::Draw(){
     Vector2 trunkSize = { 6, 12 };
-    Vector2 top = {position.x + 3, position.y - 12};
+    Vector2 position = { position_.x + 5, position_.y };
+    Vector2 top = { position.x + 3, position.y - 12};
     Vector2 bottomRight = { position.x + 12, position.y};
     Vector2 bottomLeft = { position.x - 6, position.y};
     DrawRectangleV(position, trunkSize, BROWN);
@@ -131,16 +125,22 @@ void WorldObject::Draw(Vector2 position){
     DrawTriangle({top.x, top.y - 6}, {bottomLeft.x, bottomLeft.y - 6}, {bottomRight.x, bottomRight.y - 6}, DARKGREEN);
 }
 
-void WorldObject::setPosition(int x, int y){
-    position_.x = x;
-    position_.y = y;
+class RockObject : public WorldObject{
+    public:
+        RockObject(){}
+        virtual void Draw() override;
+};
+
+void RockObject::Draw(){
+    DrawRectangleV(position_, {16,16}, GRAY);
+    DrawRectangleV({position_.x + 5, position_.y}, {10,10}, LIGHTGRAY);
 }
 
 class World{
     public:
         World();
         void Draw();
-        void generateTerrainTemplate();
+        void generateTerrain();
         void generateWorldObjects();
         const TerrainTemplate& getTerrainTemplate(TerrainType type) const;
 
@@ -149,14 +149,20 @@ class World{
         static const int numTilesHeight = HEIGHT / 16;
         // TerrainTemplate* tiles_[numTilesWidth][numTilesHeight];
         TerrainType tiles_[numTilesWidth][numTilesHeight];
-        WorldObject* worldObjects_[numTilesWidth][numTilesHeight];
+        // WorldObject* worldObjects_[numTilesWidth][numTilesHeight];
         bool occupied_[numTilesWidth][numTilesHeight];
+
+        // Terrain templates
         TerrainTemplate noneTerrainTemplate_;
         TerrainTemplate grassTerrainTemplate_;
         TerrainTemplate rockTerrainTemplate_;
         TerrainTemplate waterTerrainTemplate_;
-        WorldObject tree_;
-        WorldObject rock_;
+
+        // World Objects
+        std::vector<std::unique_ptr<WorldObject>> worldObjects_;
+        WorldObject* objectGrid_[WIDTH][HEIGHT];
+        RockObject rock_;
+        TreeObject tree_;
 };
 
 
@@ -171,7 +177,6 @@ World::World()
     for (int i = 0; i < numTilesWidth; i++) {
         for (int j = 0; j < numTilesHeight; j++) {
             tiles_[i][j] = TerrainType::NONE;
-            worldObjects_[i][j] = nullptr;
             occupied_[i][j] = false;
         }
     }
@@ -185,7 +190,7 @@ const TerrainTemplate& World::getTerrainTemplate(TerrainType type) const{
     }
 }
 
-void World::generateTerrainTemplate(){
+void World::generateTerrain(){
     for (int i = 0; i < numTilesWidth; i++){
         for (int j = 0; j < numTilesHeight; j++){
             if (tiles_[i][j] != TerrainType::NONE) { continue; }
@@ -233,16 +238,33 @@ void World::generateWorldObjects(){
             if (tiles_[i][j] == TerrainType::Water) { continue; }
 
             int random = rand() % 101;
-            if (random >= 95){
+            if (random >= 98){
                 int radius = rand() % 5;
                 for (int k = ((i - radius) > 0) ? (i - radius) : 0; k < i + radius && k < numTilesWidth; k++){
                     for (int l = ((j - radius) > 0) ? (j - radius) : 0; l < j + radius && l < numTilesHeight; l++){
                         int treeRandom = rand() % 100;
                         // skip if already set to something, and randomly decide to place
                         if (tiles_[k][l] == TerrainType::Water) { continue; } 
-                        if (worldObjects_[k][l] != nullptr && treeRandom <= 1) { continue; }
-                        worldObjects_[k][l] = &tree_;
-                        worldObjects_[k][l]->setPosition(k * getTerrainTemplate(tiles_[k][l]).GetDimensions().x, l * getTerrainTemplate(tiles_[k][l]).GetDimensions().y);
+                        if (occupied_[k][l] == true) { continue; }
+                        if (treeRandom >= 50) { continue; }
+                        worldObjects_.push_back(std::make_unique<TreeObject>());
+                        Vector2 position = {static_cast<float>(k * 16), static_cast<float>(l * 16)};
+                        worldObjects_.back()->setPosition(position);
+                        occupied_[k][l] = true;
+                    }
+                }
+            }
+            else if (random >= 97){
+                int radius = rand() % 3;
+                for (int k = ((i - radius) > 0) ? (i - radius) : 0; k < i + radius && k < numTilesWidth; k++){
+                    for (int l = ((j - radius) > 0) ? (j - radius) : 0; l < j + radius && l < numTilesHeight; l++){
+                        int rockRandom = rand() % 10;
+                        if (tiles_[k][l] == TerrainType::Water) { continue; } 
+                        if (occupied_[k][l] == true) { continue; }
+                        if (rockRandom >= 4) { continue; }
+                        worldObjects_.push_back(std::make_unique<RockObject>());
+                        Vector2 position = {static_cast<float>(k * 16), static_cast<float>(l * 16)};
+                        worldObjects_.back()->setPosition(position);
                         occupied_[k][l] = true;
                     }
                 }
@@ -259,12 +281,11 @@ void World::Draw(){
                 position.x = i * getTerrainTemplate(tiles_[i][j]).GetDimensions().x; 
                 position.y = j * getTerrainTemplate(tiles_[i][j]).GetDimensions().y; 
                 getTerrainTemplate(tiles_[i][j]).Draw(position);
-                if (worldObjects_[i][j] != nullptr){
-                    // Change this back once compartmentalization of classes for world objects
-                    worldObjects_[i][j]->Draw(position);    
-                }
             }
         }
+    }
+    for (auto& object : worldObjects_){
+        object->Draw();
     }
 }
 
@@ -512,7 +533,7 @@ int main()
 {
     InitWindow(800, 450, "Raylib Test");
     World world;
-    world.generateTerrainTemplate();
+    world.generateTerrain();
     world.generateWorldObjects();
     InputHandler input_handler = InputHandler();
 
