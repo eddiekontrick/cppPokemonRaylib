@@ -15,6 +15,7 @@ class Pokemon{
         void Update(float dt);
         void Draw();
         void DisplayStats();
+        Vector2 GetPosition() const;
         const PokemonTemplate& GetTemplate() const;
 
     private:

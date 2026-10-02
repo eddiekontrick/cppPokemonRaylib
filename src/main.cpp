@@ -31,6 +31,14 @@ Vector2 InputHandler::GetMovementDirection(){
     return direction;
 }
 
+Vector2 getTileEntity(Vector2 pos){
+    Vector2 tileLocation = pos;
+    tileLocation.x = tileLocation.x / 16;
+    tileLocation.y = tileLocation.y / 16;
+    return tileLocation;
+}
+
+
 int main()
 {
     InitWindow(800, 450, "Raylib Test");
@@ -58,9 +66,9 @@ int main()
         celebi.Update(dt);
 
         BeginDrawing();
-
-        world.Draw();
         ClearBackground(RAYWHITE);
+        world.Draw();
+        
         
         jirachi.Draw();
         gible.Draw();
