@@ -32,6 +32,17 @@ endif()
 
 add_executable(cppRaylibPokemon
     src/main.cpp
+    src/core/Direction.cpp
+    src/pokemon/Animator.cpp
+    src/pokemon/PokemonTemplate.cpp
+    src/pokemon/Pokemon.cpp
+    src/terrain/Terrain.cpp
+    src/world/WorldObject.cpp
+    src/world/World.cpp
+)
+
+target_include_directories(cppRaylibPokemon PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 target_link_libraries(cppRaylibPokemon PRIVATE raylib tinyxml2)

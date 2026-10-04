@@ -117,12 +117,15 @@ void World::Draw(){
                 position.x = i * getTerrainTemplate(tiles_[i][j]).GetDimensions().x; 
                 position.y = j * getTerrainTemplate(tiles_[i][j]).GetDimensions().y; 
                 getTerrainTemplate(tiles_[i][j]).Draw(position);
+                for (auto& object : worldObjects_){
+                    if (object->getPosition().x == position.x && object->getPosition().y == position.y) object->Draw();
+                }
             }
         }
-    }
+    }/*
     for (auto& object : worldObjects_){
         object->Draw();
-    }
+    }*/
 }
 
 }

@@ -5,10 +5,15 @@
 #include "../core/Constants.h"
 
 #include <memory>
-
 #include <vector>
 
 namespace World {
+
+struct Tile {
+    Terrain::TerrainType terrainType;
+    bool isOccupied;
+    std::unique_ptr<WorldObject> owner;
+};
 
 class World{
     public:
