@@ -9,6 +9,7 @@
 #include "core/Constants.h"
 #include "pokemon/Pokemon.h"
 #include "pokemon/PokemonTemplate.h"
+#include "dev_mode/DevMode.h"
 
 #include "raylib.h"
 
@@ -34,7 +35,9 @@ Vector2 InputHandler::GetMovementDirection(){
 int main()
 {
     InitWindow(800, 450, "Raylib Test");
+    DevMode devMode{};
     World::World world;
+    world.setDevMode(devMode);
     world.generateTerrain();
     world.generateWorldObjects();
     InputHandler input_handler = InputHandler();
@@ -47,7 +50,7 @@ int main()
     Pokemon::Pokemon jirachi(jirachi_template);
     Pokemon::Pokemon celebi(celebi_template, { (float)(rand() % 400 + 100), (float)(rand() % 200 + 50) });
     Pokemon::Pokemon gible(gible_template, { (float)(rand() % 700 + 100), (float)(rand() % 400 + 50) });
-    
+
     while (!WindowShouldClose())
     {   
         float dt = GetFrameTime();
@@ -57,10 +60,12 @@ int main()
         gible.Update(dt);
         celebi.Update(dt);
 
-        BeginDrawing();
+        if (IsKeyPressed(KEY_F3))
+            devMode.toggle();
 
-        world.Draw();
+        BeginDrawing();
         ClearBackground(RAYWHITE);
+        world.Draw();
         
         jirachi.Draw();
         gible.Draw();

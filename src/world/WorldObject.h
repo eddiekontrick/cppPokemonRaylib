@@ -14,7 +14,7 @@ class WorldObject{
 
     protected:
         Vector2 position_;
-        // int radius; For how much space it occupies
+        int radius; // For how much space it occupies
         // Texture2D texture;
 };
 

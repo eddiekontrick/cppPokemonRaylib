@@ -3,6 +3,7 @@
 #include "../terrain/Terrain.h"
 #include "WorldObject.h"
 #include "../core/Constants.h"
+#include "../dev_mode/DevMode.h"
 
 #include <memory>
 #include <vector>
@@ -18,10 +19,12 @@ struct Tile {
 class World{
     public:
         World();
+        void setDevMode(DevMode& devMode);
         void Draw();
         void generateTerrain();
         void generateWorldObjects();
         const Terrain::TerrainTemplate& getTerrainTemplate(Terrain::TerrainType type) const;
+        bool searchTileRadius(int radius, int x, int y);
 
     private:
         static const int numTilesWidth = WIDTH / TILE_SIZE;
@@ -43,6 +46,8 @@ class World{
         std::vector<std::unique_ptr<WorldObject>> worldObjects_;
         RockObject rock_;
         TreeObject tree_;
+
+        DevMode* devMode_ = nullptr;
 };
 
 }

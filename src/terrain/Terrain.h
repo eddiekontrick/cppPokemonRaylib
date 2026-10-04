@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include "../dev_mode/DevMode.h"
 #include <string>
 
 namespace Terrain {
@@ -19,6 +20,7 @@ class TerrainTemplate{
     public:
         TerrainTemplate(int moveCost, bool isWater, int length, int width, Color color);
         TerrainTemplate();
+        void setDevMode(DevMode& devMode);
 
         void Draw(Vector2 position) const;
         void DrawCoordinates(Vector2 position) const;
@@ -30,6 +32,7 @@ class TerrainTemplate{
         bool isWater_;
         Color color_;
         TileDimensions dimensions_;
+        DevMode* devMode_ = nullptr;
         // Texture texture_;
 };
 

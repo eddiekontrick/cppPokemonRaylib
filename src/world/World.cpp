@@ -18,12 +18,17 @@ World::World()
     }
 }
 
+void World::setDevMode(DevMode& devMode){
+    devMode_ = &devMode;
+}
+
 const Terrain::TerrainTemplate& World::getTerrainTemplate(Terrain::TerrainType type) const{
     switch(type){
         case(Terrain::TerrainType::NONE) : return noneTerrainTemplate_;
         case(Terrain::TerrainType::Grass) : return grassTerrainTemplate_;
         case(Terrain::TerrainType::Water): return waterTerrainTemplate_;
     }
+    return noneTerrainTemplate_;
 }
 
 void World::generateTerrain(){
@@ -120,9 +125,35 @@ void World::Draw(){
                 for (auto& object : worldObjects_){
                     if (object->getPosition().x == position.x && object->getPosition().y == position.y) object->Draw();
                 }
+                if (devMode_ != nullptr && devMode_->getActiveFlag()){
+                    DrawRectangleLines(position.x, position.y, TILE_SIZE, TILE_SIZE, DARKGRAY);
+                    if (!tiles_[i][j].isOccupied){
+                        DrawRectangleV(
+                            position,
+                            {static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE)},
+                            Color{0, 0, 255, 100}
+                        ); 
+                    }
+                    if (tiles_[i][j].isOccupied){
+                        DrawRectangleV(
+                            position,
+                            {static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE)},
+                            Color{255, 0, 0, 100}
+                        ); 
+                    }
+                }
             }
         }
     }
+}
+
+bool World::searchTileRadius(int radius, int x, int y){
+    for (int i = 0; i < radius; i++){
+        for (int j = 0; j < radius; j++){
+            if (tiles_[i][j].isOccupied) return false;
+        }
+    }
+    return true;
 }
 
 }

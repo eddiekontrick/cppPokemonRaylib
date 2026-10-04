@@ -7,6 +7,10 @@ TerrainTemplate::TerrainTemplate(int moveCost, bool isWater, int length, int wid
 
 TerrainTemplate::TerrainTemplate(){}
 
+void TerrainTemplate::setDevMode(DevMode& devMode){
+    devMode_ = &devMode;
+}
+
 void TerrainTemplate::Draw(Vector2 position) const {
     DrawRectangleV(
         position, 

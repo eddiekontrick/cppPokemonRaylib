@@ -39,6 +39,7 @@ add_executable(cppRaylibPokemon
     src/terrain/Terrain.cpp
     src/world/WorldObject.cpp
     src/world/World.cpp
+    src/dev_mode/DevMode.cpp
 )
 
 target_include_directories(cppRaylibPokemon PRIVATE
