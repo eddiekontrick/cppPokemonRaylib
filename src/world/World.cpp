@@ -3,10 +3,10 @@
 namespace World {
 
 World::World()
-:   noneTerrainTemplate_(0, false, 16, 16, GRAY),
-    grassTerrainTemplate_(1, false, 16, 16, GREEN),
-    rockTerrainTemplate_(2, false, 16, 16, BROWN),
-    waterTerrainTemplate_(3, true, 16, 16, BLUE),
+:   noneTerrainTemplate_(0, false, TILE_SIZE, TILE_SIZE, GRAY),
+    grassTerrainTemplate_(1, false, TILE_SIZE, TILE_SIZE, GREEN),
+    rockTerrainTemplate_(2, false, TILE_SIZE, TILE_SIZE, BROWN),
+    waterTerrainTemplate_(3, true, TILE_SIZE, TILE_SIZE, BLUE),
     tree_(),
     rock_()
 {
@@ -84,7 +84,7 @@ void World::generateWorldObjects(){
                         if (tiles_[k][l].isOccupied == true) { continue; }
                         if (treeRandom >= 50) { continue; }
                         worldObjects_.push_back(std::make_unique<TreeObject>());
-                        Vector2 position = {static_cast<float>(k * 16), static_cast<float>(l * 16)};
+                        Vector2 position = {static_cast<float>(k * TILE_SIZE), static_cast<float>(l * TILE_SIZE)};
                         worldObjects_.back()->setPosition(position);
                         tiles_[k][l].isOccupied = true;
                     }
@@ -99,7 +99,7 @@ void World::generateWorldObjects(){
                         if (tiles_[k][l].isOccupied == true) { continue; }
                         if (rockRandom >= 4) { continue; }
                         worldObjects_.push_back(std::make_unique<RockObject>());
-                        Vector2 position = {static_cast<float>(k * 16), static_cast<float>(l * 16)};
+                        Vector2 position = {static_cast<float>(k * TILE_SIZE), static_cast<float>(l * TILE_SIZE)};
                         worldObjects_.back()->setPosition(position);
                         tiles_[k][l].isOccupied = true;
                     }
@@ -122,10 +122,7 @@ void World::Draw(){
                 }
             }
         }
-    }/*
-    for (auto& object : worldObjects_){
-        object->Draw();
-    }*/
+    }
 }
 
 }
