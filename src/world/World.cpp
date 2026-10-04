@@ -12,8 +12,8 @@ World::World()
 {
     for (int i = 0; i < numTilesWidth; i++) {
         for (int j = 0; j < numTilesHeight; j++) {
-            tiles_[i][j] = Terrain::TerrainType::NONE;
-            occupied_[i][j] = false;
+            tiles_[i][j].terrainType = Terrain::TerrainType::NONE;
+            tiles_[i][j].isOccupied = false;
         }
     }
 }
@@ -29,16 +29,16 @@ const Terrain::TerrainTemplate& World::getTerrainTemplate(Terrain::TerrainType t
 void World::generateTerrain(){
     for (int i = 0; i < numTilesWidth; i++){
         for (int j = 0; j < numTilesHeight; j++){
-            if (tiles_[i][j] != Terrain::TerrainType::NONE) { continue; }
+            if (tiles_[i][j].terrainType != Terrain::TerrainType::NONE) { continue; }
 
             if (rand() % 100 >= 99){
-                tiles_[i][j] = Terrain::TerrainType::Water;
+                tiles_[i][j].terrainType = Terrain::TerrainType::Water;
 
                 int waterDecision = rand() % 4;
                 if (waterDecision >= 3) {
                     // fill entire row with water
-                    for (Terrain::TerrainType& tile : tiles_[i]) {
-                        tile = Terrain::TerrainType::Water; 
+                    for (Tile& tile : tiles_[i]) {
+                        tile.terrainType = Terrain::TerrainType::Water; 
                     }
                 }
                 else {
@@ -53,14 +53,14 @@ void World::generateTerrain(){
                             int dx = k - i;
                             int dy = l - j;
                             if (dx*dx + dy*dy <= pondRadius*pondRadius){
-                                tiles_[k][l] = Terrain::TerrainType::Water;
+                                tiles_[k][l].terrainType = Terrain::TerrainType::Water;
                             }
                         }
                     }
                 }
             }
             else {
-                tiles_[i][j] = Terrain::TerrainType::Grass;
+                tiles_[i][j].terrainType = Terrain::TerrainType::Grass;
             }
         }
     }
@@ -71,7 +71,7 @@ void World::generateWorldObjects(){
         for (int j = 0; j < numTilesHeight; j++){
             // skip if water tile
             // SOMETHING ABOUT THIS is not working
-            if (tiles_[i][j] == Terrain::TerrainType::Water) { continue; }
+            if (tiles_[i][j].terrainType == Terrain::TerrainType::Water) { continue; }
 
             int random = rand() % 101;
             if (random >= 98){
@@ -80,13 +80,13 @@ void World::generateWorldObjects(){
                     for (int l = ((j - radius) > 0) ? (j - radius) : 0; l < j + radius && l < numTilesHeight; l++){
                         int treeRandom = rand() % 100;
                         // skip if already set to something, and randomly decide to place
-                        if (tiles_[k][l] == Terrain::TerrainType::Water) { continue; } 
-                        if (occupied_[k][l] == true) { continue; }
+                        if (tiles_[k][l].terrainType == Terrain::TerrainType::Water) { continue; } 
+                        if (tiles_[k][l].isOccupied == true) { continue; }
                         if (treeRandom >= 50) { continue; }
                         worldObjects_.push_back(std::make_unique<TreeObject>());
                         Vector2 position = {static_cast<float>(k * 16), static_cast<float>(l * 16)};
                         worldObjects_.back()->setPosition(position);
-                        occupied_[k][l] = true;
+                        tiles_[k][l].isOccupied = true;
                     }
                 }
             }
@@ -95,13 +95,13 @@ void World::generateWorldObjects(){
                 for (int k = ((i - radius) > 0) ? (i - radius) : 0; k < i + radius && k < numTilesWidth; k++){
                     for (int l = ((j - radius) > 0) ? (j - radius) : 0; l < j + radius && l < numTilesHeight; l++){
                         int rockRandom = rand() % 10;
-                        if (tiles_[k][l] == Terrain::TerrainType::Water) { continue; } 
-                        if (occupied_[k][l] == true) { continue; }
+                        if (tiles_[k][l].terrainType == Terrain::TerrainType::Water) { continue; } 
+                        if (tiles_[k][l].isOccupied == true) { continue; }
                         if (rockRandom >= 4) { continue; }
                         worldObjects_.push_back(std::make_unique<RockObject>());
                         Vector2 position = {static_cast<float>(k * 16), static_cast<float>(l * 16)};
                         worldObjects_.back()->setPosition(position);
-                        occupied_[k][l] = true;
+                        tiles_[k][l].isOccupied = true;
                     }
                 }
             }
@@ -113,10 +113,10 @@ void World::Draw(){
     Vector2 position = { 0, 0 };
     for (int i = 0; i < numTilesWidth; i++){
         for (int j = 0; j < numTilesHeight; j++){
-            if (tiles_[i][j] != Terrain::TerrainType::NONE) {
-                position.x = i * getTerrainTemplate(tiles_[i][j]).GetDimensions().x; 
-                position.y = j * getTerrainTemplate(tiles_[i][j]).GetDimensions().y; 
-                getTerrainTemplate(tiles_[i][j]).Draw(position);
+            if (tiles_[i][j].terrainType != Terrain::TerrainType::NONE) {
+                position.x = i * getTerrainTemplate(tiles_[i][j].terrainType).GetDimensions().x; 
+                position.y = j * getTerrainTemplate(tiles_[i][j].terrainType).GetDimensions().y; 
+                getTerrainTemplate(tiles_[i][j].terrainType).Draw(position);
                 for (auto& object : worldObjects_){
                     if (object->getPosition().x == position.x && object->getPosition().y == position.y) object->Draw();
                 }

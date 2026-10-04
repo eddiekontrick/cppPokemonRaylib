@@ -24,12 +24,14 @@ class World{
         const Terrain::TerrainTemplate& getTerrainTemplate(Terrain::TerrainType type) const;
 
     private:
-        static const int numTilesWidth = WIDTH / 16;
-        static const int numTilesHeight = HEIGHT / 16;
+        static const int numTilesWidth = WIDTH / TILE_SIZE;
+        static const int numTilesHeight = HEIGHT / TILE_SIZE;
         // TerrainTemplate* tiles_[numTilesWidth][numTilesHeight];
-        Terrain::TerrainType tiles_[numTilesWidth][numTilesHeight];
+        // Terrain::TerrainType tiles_[numTilesWidth][numTilesHeight];
         // WorldObject* worldObjects_[numTilesWidth][numTilesHeight];
-        bool occupied_[numTilesWidth][numTilesHeight];
+        // bool occupied_[numTilesWidth][numTilesHeight];
+
+        Tile tiles_[numTilesWidth][numTilesHeight];
 
         // Terrain templates
         Terrain::TerrainTemplate noneTerrainTemplate_;
