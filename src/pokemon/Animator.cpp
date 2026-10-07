@@ -88,8 +88,15 @@ void Animator::Update(float dt) {
 }
 
 void Animator::Draw(Vector2 position) {
+    // ------ IMPORTANT -------
+    // ** change this to currentAnimation later on **
+    position.x -= walkAnimation_.frameWidth / 2;
+    position.y -= walkAnimation_.frameHeight / 2;
     if (sprite_.id != 0) {
         DrawTextureRec(sprite_, sourceRec_, position, WHITE);
+    }
+    if (DevMode::getActiveFlag()){
+        DrawRectangleLines(position.x, position.y, walkAnimation_.frameWidth, walkAnimation_.frameHeight, BLACK);
     }
 }
 

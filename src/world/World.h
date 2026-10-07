@@ -19,7 +19,6 @@ struct Tile {
 class World{
     public:
         World();
-        void setDevMode(DevMode& devMode);
         void Draw();
         void generateTerrain();
         void generateWorldObjects();
@@ -46,8 +45,6 @@ class World{
         std::vector<std::unique_ptr<WorldObject>> worldObjects_;
         RockObject rock_;
         TreeObject tree_;
-
-        DevMode* devMode_ = nullptr;
 };
 
 }

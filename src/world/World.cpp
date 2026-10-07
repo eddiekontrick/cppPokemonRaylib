@@ -18,10 +18,6 @@ World::World()
     }
 }
 
-void World::setDevMode(DevMode& devMode){
-    devMode_ = &devMode;
-}
-
 const Terrain::TerrainTemplate& World::getTerrainTemplate(Terrain::TerrainType type) const{
     switch(type){
         case(Terrain::TerrainType::NONE) : return noneTerrainTemplate_;
@@ -125,7 +121,7 @@ void World::Draw(){
                 for (auto& object : worldObjects_){
                     if (object->getPosition().x == position.x && object->getPosition().y == position.y) object->Draw();
                 }
-                if (devMode_ != nullptr && devMode_->getActiveFlag()){
+                if (DevMode::getActiveFlag()){
                     DrawRectangleLines(position.x, position.y, TILE_SIZE, TILE_SIZE, DARKGRAY);
                     if (!tiles_[i][j].isOccupied){
                         DrawRectangleV(

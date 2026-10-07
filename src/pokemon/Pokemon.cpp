@@ -47,6 +47,9 @@ void Pokemon::Move(Vector2 direction, float dt){
 
 void Pokemon::Draw(){
     animator_.Draw(position_);
+    if (DevMode::getActiveFlag()){
+        DrawCircleV(position_, radius_ * TILE_SIZE, (Color){0, 255, 255, 100});
+    }
 }
 
 }

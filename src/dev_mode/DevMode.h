@@ -2,8 +2,12 @@
 
 class DevMode{
     public:
-        void toggle();
-        bool getActiveFlag();
+        static void toggle() {
+            active_ = !active_;
+        }
+        static bool getActiveFlag() {
+            return active_;
+        }
     private:
-        bool active_ = false;
-};
+        static bool active_;
+};  

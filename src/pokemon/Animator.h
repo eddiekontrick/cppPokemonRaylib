@@ -4,6 +4,7 @@
 
 #include "raylib.h"
 #include "../core/Direction.h"
+#include "dev_mode/DevMode.h"
 
 namespace Pokemon {
 

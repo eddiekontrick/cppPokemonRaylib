@@ -5,6 +5,7 @@
 #include "raylib.h"
 #include "../core/Constants.h"
 #include "../core/Direction.h"
+#include "dev_mode/DevMode.h"
 
 namespace Pokemon {
 
@@ -38,6 +39,8 @@ class Pokemon{
         float defense_ev_ = 0;
         float sp_defense_ev_ = 0;
         float speed_ev_ = 0;
+
+        int radius_ = 1;
 };
 
 }

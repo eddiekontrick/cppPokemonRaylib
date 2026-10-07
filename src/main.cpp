@@ -35,9 +35,7 @@ Vector2 InputHandler::GetMovementDirection(){
 int main()
 {
     InitWindow(800, 450, "Raylib Test");
-    DevMode devMode{};
     World::World world;
-    world.setDevMode(devMode);
     world.generateTerrain();
     world.generateWorldObjects();
     InputHandler input_handler = InputHandler();
@@ -60,8 +58,8 @@ int main()
         gible.Update(dt);
         celebi.Update(dt);
 
-        if (IsKeyPressed(KEY_F3))
-            devMode.toggle();
+        if (IsKeyPressed(KEY_P))
+            DevMode::toggle();
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
